@@ -22,8 +22,7 @@ from selenium_scraper import SeleniumScraper
 from exporter import DataExporter
 from dedupe import Deduplicator
 from robots_checker import RobotsChecker
-from yelp_scraper import YelpScraper
-from yellow_pages_scraper import YellowPagesScraper
+
 import extra_streamlit_components as stx
 from datetime import timedelta
 try:
@@ -1478,4 +1477,5 @@ def main():
             user_panel()
 
 if __name__ == "__main__":
+
     main()
