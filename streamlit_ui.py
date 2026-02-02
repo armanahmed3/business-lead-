@@ -1219,7 +1219,7 @@ def more_features_tab():
     
     # Fallback button if JavaScript doesn't work
     if st.button("🚀 Open Advanced Features", use_container_width=True):
-        st.markdown('[Click here to open Advanced Features](https://business-lead-scraper-chka6fcq6jjuemaphapd9n.streamlit.app/)', unsafe_allow_html=True)
+        st.markdown('[Click here to open Advanced Features](https://titech-manis.streamlit.app/)', unsafe_allow_html=True)
 
 def google_maps_scraping():
     col1, col2 = st.columns(2)
@@ -1479,3 +1479,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
