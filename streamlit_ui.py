@@ -40,10 +40,25 @@ class DBHandler:
     def __init__(self):
         self.use_gsheets = False
         try:
+            # Check safely if 'connections' exists in secrets, then 'gsheets'
             if GSheetsConnection and "connections" in st.secrets and "gsheets" in st.secrets.connections:
-                self.use_gsheets = True
+                # IMPORTANT: Streamlit's st.connection will throw an error if secrets are malformed
+                # We want to catch it early.
                 self.conn = st.connection("gsheets", type=GSheetsConnection)
-        except Exception:
+                
+                # Test the connection immediately. If it fails, fallback to SQLite.
+                # This prevents the UI from crashing later or showing "GSheets" when it's broken.
+                try:
+                    self.conn.read(ttl=0, nrows=1)
+                    self.use_gsheets = True
+                    print("✅ Google Sheets Connection Successful")
+                except Exception as e:
+                    print(f"⚠️ Google Sheets Connected but Read Failed: {e}")
+                    self.use_gsheets = False
+            else:
+                print("❌ No Google Sheets configuration found in secrets.")
+        except Exception as e:
+            print(f"❌ Google Sheets Connection Failed entirely: {e}")
             self.use_gsheets = False
             
     def init_db(self):
