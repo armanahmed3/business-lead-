@@ -39,26 +39,30 @@ except ImportError:
 class DBHandler:
     def __init__(self):
         self.use_gsheets = False
+        self.connection_error = None
         try:
             # Check safely if 'connections' exists in secrets, then 'gsheets'
             if GSheetsConnection and "connections" in st.secrets and "gsheets" in st.secrets.connections:
                 # IMPORTANT: Streamlit's st.connection will throw an error if secrets are malformed
-                # We want to catch it early.
                 self.conn = st.connection("gsheets", type=GSheetsConnection)
                 
-                # Test the connection immediately. If it fails, fallback to SQLite.
-                # This prevents the UI from crashing later or showing "GSheets" when it's broken.
+                # Test the connection immediately.
                 try:
                     self.conn.read(ttl=0, nrows=1)
                     self.use_gsheets = True
-                    print("✅ Google Sheets Connection Successful")
                 except Exception as e:
-                    print(f"⚠️ Google Sheets Connected but Read Failed: {e}")
+                    self.connection_error = f"Google Sheets Read Failed: {str(e)}"
                     self.use_gsheets = False
             else:
-                print("❌ No Google Sheets configuration found in secrets.")
+                if not GSheetsConnection:
+                    self.connection_error = "Missing package: st-gsheets-connection"
+                elif "connections" not in st.secrets:
+                    self.connection_error = "Secrets missing [connections] section"
+                else:
+                    self.connection_error = "Secrets missing [connections.gsheets] section"
+                self.use_gsheets = False
         except Exception as e:
-            print(f"❌ Google Sheets Connection Failed entirely: {e}")
+            self.connection_error = f"Fatal Connection Error: {str(e)}"
             self.use_gsheets = False
             
     def init_db(self):
@@ -101,6 +105,12 @@ class DBHandler:
                 print(f"Warning: Could not connect to Google Sheets: {e}")
                 # We don't set self.use_gsheets = False here because it might be transient
         else:
+            if self.connection_error:
+                # If we have a connection error, it means we TRIED GSheets and failed.
+                # In this mode, we skip SQLite initialization to avoid hidden local storage.
+                print(f"Skipping SQLite Init due to GSheets Error: {self.connection_error}")
+                return
+
             # SQLite Logic
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
@@ -686,6 +696,19 @@ def login_page():
             font-size: 32px;
         }}
 
+        /* Error Notification */
+        .connection-error {{
+            background-color: #ff4d4d;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            border: 1px solid #cc0000;
+        }}
+
+
         /* 2. Login Form Styling */
         [data-testid="stForm"] {{
             background-color: {card_bg};
@@ -769,6 +792,11 @@ def login_page():
                 </div>
             </div>
         """, unsafe_allow_html=True)
+
+        # Show Connection Error if any
+        if db.connection_error:
+            st.error(f"🔌 Database Connection Issue: {db.connection_error}")
+            st.info("Check your `.streamlit/secrets.toml` or install `st-gsheets-connection`.")
 
         # 2. Form (Streamlit native widgets styled with CSS)
         with st.form("login_form", clear_on_submit=False):
